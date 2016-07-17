@@ -29,6 +29,59 @@ int main(int argc, char *argv[])
 	    return -1;
 	}
 
-	return a.exec();
+	
+	QtAxExcelEngine excel_engine;
+	bret = excel_engine.initialize(false);
+	if (!bret)
+	{
+		fprintf(stderr, "initialize excel fail.\n");
+	}
+	//测试相对路径打开，
+	bret = excel_engine.open(".\\excel\\example01.xlsx");
+	if (!bret)
+	{
+		fprintf(stderr, "Open excel fail.\n");
+	}
+
+	//测试使用非预加载 load一个sheet
+	fprintf(stderr, "=======================================.\n");
+	bret = excel_engine.loadSheet(1, false);
+	if (!bret)
+	{
+		fprintf(stderr, "load excel sheet fail.\n");
+	}
+	for (int i = 1; i <= excel_engine.rowCount(); ++i)
+	{
+		for (int j = 1; j <= excel_engine.columnCount(); ++j)
+		{
+			fprintf(stderr, "cell data row %d column %d data:[%s].\n",
+					i,
+					j,
+					excel_engine.getCell(i, j).toString().toStdString().c_str());
+		}
+	}
+
+	//测试使用预加载 load一个sheet
+	fprintf(stderr, "=======================================.\n");
+	bret = excel_engine.loadSheet(1, true);
+	if (!bret)
+	{
+		fprintf(stderr, "load excel sheet fail.\n");
+	}
+	for (int i = 1; i <= excel_engine.rowCount(); ++i)
+	{
+		for (int j = 1; j <= excel_engine.columnCount(); ++j)
+		{
+			fprintf(stderr, "cell data row %d column %d data:[%s].\n", 
+					i,
+					j,
+					excel_engine.getCell(i,j).toString().toStdString().c_str());
+		}
+	}
+
+	
+	excel_engine.finalize();
+
+	return a.quit();
 }
 

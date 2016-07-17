@@ -103,14 +103,9 @@ public:
     void finalize();
 
     //打开一个XLS文件
-    bool open(const QString &xls_file, int  sheet_index = 1);
+	bool open(const QString &xls_file);
 
-    /*!
-    * @brief      插入一个sheet，同时加载这个表格，
-    * @return     void
-    * @param      sheet_name sheet的表名
-    */
-    void insertSheet(const QString &sheet_name);
+
 
     //保存xls报表
     void save();
@@ -150,7 +145,26 @@ public:
     */
     bool hasSheet(const QString &sheet_name);
 
-    //保存数据到xls
+
+	/*!
+	* @brief      插入一个sheet，同时加载这个表格，
+	* @param      sheet_name sheet的表名
+	*/
+	void insertSheet(const QString &sheet_name);
+
+	
+	/*!
+	* @brief      对当前的Sheet进行改名操作，
+	* @param      new_name 新的名字
+	*/
+	void renameSheet(const QString &new_name);
+
+
+    /*!
+    * @brief      把tableWidget中的数据保存到excel中
+    * @return     bool
+    * @param      table_widget
+    */
     bool writeTableWidget(QTableWidget *table_widget);
 
     //从xls读取数据到ui
@@ -165,24 +179,34 @@ public:
     */
     QVariant getCell(int row, int column);
 
-    //修改指定单元数据
+    
+    /*!
+    * @brief      修改指定单元数据
+    * @return     bool  是否修改成功
+    * @param      row    行号
+    * @param      column 列号
+    * @param      data   修改的数据
+    */
     bool  setCell(int row, int column, const QVariant &data);
 
     //!打开的xls文件名称
     QString openFilename() const;
 
-    //!行数
-    int  rowCount()const;
-    //!列数
-    int  columnCount()const;
+    //!当前Sheet的行数,包括空行 
+    int  rowCount() const;
+    //!当前Sheet的列数,包括空行 
+    int  columnCount() const;
+
+	//!当前的Sheet的起始行数，如果第1,2行是空，没有数据，那么返回3
+	int startRow() const;
+	//!当前的Sheet的起始列数，如果第1,2,3列是空，没有数据，那么返回4
+	int startColumn() const;
 
 
     bool is_open();
     bool is_valid();
 
 protected:
-
-    void clear();
 
     //!加载，内部函数，以后可以考虑增加一个预加载，加快读取速度。
     void loadSheet_internal(bool pre_load);
@@ -207,28 +231,27 @@ private:
     //!指向sXlsFile对应的工作簿
     QAxObject *active_book_ = NULL;
 
-    //!
-    QAxObject *work_sheets_ = NULL;
-
     //指向工作簿中的某个sheet表单
     QAxObject *active_sheet_ = NULL;
 
     //!xls文件路径
     QString xls_file_;
 
-    //!当前打开的第几个sheet
-    int curr_sheet_ = 1;
+	//预加载的表的数据
+	QVariantList preload_sheet_data_;
+
     //!excel是否可见
     bool is_visible_ = false;
-    //行数
+
+    //!行数,包括起始的空行
     int row_count_ = 0;
-    //!列数
+    //!列数,包括起始的空列
     int column_count_ = 0;
 
     //!开始有数据的行下标值
-    int start_row_ = 0;
+    int start_row_ = 1;
     //!开始有数据的列下标值
-    int start_column_ = 0;
+    int start_column_ = 1;
 
     //!是否已打开
     bool is_open_ = false;
@@ -239,8 +262,7 @@ private:
     //!防止重复保存
     bool is_save_already_ = false;
 
-	//预加载的表的数据
-	QVariantList pre_load_data_;
+	
 
 };
 
