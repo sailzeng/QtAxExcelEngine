@@ -1,30 +1,20 @@
-#include "biko_predefine.h"
-#include "biko_qt_excel_engine.h"
+
+#include "QtAxExcelEngine.h"
 
 
-BikoQtExcelEngine::BikoQtExcelEngine()
+QtAxExcelEngine::QtAxExcelEngine()
 {
     excel_instance_     = NULL;
     work_books_ = NULL;
     active_book_  = NULL;
     active_sheet_ = NULL;
 
-    xls_file_     = "";
 
-    curr_sheet_ = 1;
-    row_count_ = 0;
-    column_count_ = 0;
-    start_row_    = 0;
-    start_column_ = 0;
 
-    is_open_     = false;
-    is_valid_    = false;
-    is_a_newfile_ = false;
-    is_save_already_ = false;
 
 }
 
-BikoQtExcelEngine::~BikoQtExcelEngine()
+QtAxExcelEngine::~QtAxExcelEngine()
 {
     if ( is_open_ )
     {
@@ -36,7 +26,7 @@ BikoQtExcelEngine::~BikoQtExcelEngine()
 
 
 //初始化EXCEL OLE对象，打开EXCEL 进程，
-bool BikoQtExcelEngine::initialize(bool visible)
+bool QtAxExcelEngine::initialize(bool visible)
 {
 
     HRESULT r = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
@@ -68,7 +58,7 @@ bool BikoQtExcelEngine::initialize(bool visible)
 
 
 //
-void BikoQtExcelEngine::finalize()
+void QtAxExcelEngine::finalize()
 {
     if (excel_instance_ )
     {
@@ -82,6 +72,14 @@ void BikoQtExcelEngine::finalize()
         is_valid_ = false;
         is_a_newfile_ = false;
         is_save_already_ = true;
+
+		curr_sheet_ = 1;
+		row_count_ = 0;
+		column_count_ = 0;
+		start_row_ = 0;
+		start_column_ = 0;
+
+		xls_file_ = "";
     }
 
     ::CoUninitialize();
@@ -89,7 +87,8 @@ void BikoQtExcelEngine::finalize()
 
 
 //打开EXCEL文件
-bool BikoQtExcelEngine::open(const QString &xls_file, int  sheet_index)
+bool QtAxExcelEngine::open(const QString &xls_file, 
+						   int  sheet_index)
 {
     xls_file_ = xls_file;
     curr_sheet_ = sheet_index;
@@ -134,7 +133,7 @@ bool BikoQtExcelEngine::open(const QString &xls_file, int  sheet_index)
     work_sheets_ = active_book_->querySubObject("WorkSheets");
 
     //至此已打开
-    loadSheet(curr_sheet_);
+    loadSheet(curr_sheet_,false);
 
     is_open_ = true;
     return is_open_;
@@ -143,7 +142,7 @@ bool BikoQtExcelEngine::open(const QString &xls_file, int  sheet_index)
 /**
   *@brief 保存表格数据，把数据写入文件
   */
-void BikoQtExcelEngine::save()
+void QtAxExcelEngine::save()
 {
     if ( active_book_ )
     {
@@ -170,7 +169,7 @@ void BikoQtExcelEngine::save()
 /**
   *@brief 关闭前先保存数据，然后关闭当前Excel COM对象，并释放内存
   */
-void BikoQtExcelEngine::close()
+void QtAxExcelEngine::close()
 {
     //关闭前先保存数据
     save();
@@ -186,13 +185,13 @@ void BikoQtExcelEngine::close()
 }
 
 //
-int BikoQtExcelEngine::sheetsCount()
+int QtAxExcelEngine::sheetsCount()
 {
     return work_books_->property("Count").toInt();
 }
 
 //得到某个sheet的名字
-bool BikoQtExcelEngine::sheetName(int sheet_index, QString &sheet_name)
+bool QtAxExcelEngine::sheetName(int sheet_index, QString &sheet_name)
 {
     QAxObject *sheet_tmp = active_book_->querySubObject("WorkSheets(int)", sheet_index);
     if (!sheet_tmp)
@@ -203,7 +202,8 @@ bool BikoQtExcelEngine::sheetName(int sheet_index, QString &sheet_name)
     return true;
 }
 
-bool BikoQtExcelEngine::loadSheet(int sheet_index)
+bool QtAxExcelEngine::loadSheet(int sheet_index,
+								bool pre_load)
 {
     active_sheet_ = active_book_->querySubObject("WorkSheets(int)", sheet_index);
 
@@ -212,14 +212,15 @@ bool BikoQtExcelEngine::loadSheet(int sheet_index)
     {
         return false;
     }
-    load_sheet_internal();
+    loadSheet_internal(pre_load);
     return true;
 }
 
 
 
 //按照序号加载Sheet表格,
-bool BikoQtExcelEngine::loadSheet(const QString &sheet_name)
+bool QtAxExcelEngine::loadSheet(const QString &sheet_name,
+								bool pre_load)
 {
     active_sheet_ = active_book_->querySubObject("WorkSheets(QString)", sheet_name);
     //如果没有打开，
@@ -227,11 +228,11 @@ bool BikoQtExcelEngine::loadSheet(const QString &sheet_name)
     {
         return false;
     }
-    load_sheet_internal();
+    loadSheet_internal(pre_load);
     return true;
 }
 
-bool BikoQtExcelEngine::hasSheet(const QString &sheet_name)
+bool QtAxExcelEngine::hasSheet(const QString &sheet_name)
 {
     QAxObject *temp_sheet = active_book_->querySubObject("WorkSheets(QString)", sheet_name);
     if (!temp_sheet)
@@ -241,7 +242,7 @@ bool BikoQtExcelEngine::hasSheet(const QString &sheet_name)
     return true;
 }
 
-void BikoQtExcelEngine::load_sheet_internal(bool pre_load)
+void QtAxExcelEngine::loadSheet_internal(bool pre_load)
 {
     //获取该sheet的使用范围对象
     QAxObject *used_range = active_sheet_->querySubObject("UsedRange");
@@ -265,12 +266,13 @@ void BikoQtExcelEngine::load_sheet_internal(bool pre_load)
 	}
 	delete used_range;
 	delete rows;
+	delete columns;
     return;
 }
 
 
 //!打开的xls文件名称
-QString BikoQtExcelEngine::open_filename() const
+QString QtAxExcelEngine::openFilename() const
 {
     return xls_file_;
 }
@@ -281,7 +283,7 @@ QString BikoQtExcelEngine::open_filename() const
   *@return 保存成功与否 true : 成功
   *                  false: 失败
   */
-bool BikoQtExcelEngine::writeTableWidget(QTableWidget *tableWidget)
+bool QtAxExcelEngine::writeTableWidget(QTableWidget *tableWidget)
 {
     if ( NULL == tableWidget )
     {
@@ -300,7 +302,7 @@ bool BikoQtExcelEngine::writeTableWidget(QTableWidget *tableWidget)
     {
         if ( tableWidget->horizontalHeaderItem(i) != NULL )
         {
-            this->set_cell(1, i + 1, tableWidget->horizontalHeaderItem(i)->text());
+            this->setCell(1, i + 1, tableWidget->horizontalHeaderItem(i)->text());
         }
     }
 
@@ -311,7 +313,7 @@ bool BikoQtExcelEngine::writeTableWidget(QTableWidget *tableWidget)
         {
             if ( tableWidget->item(i, j) != NULL )
             {
-                this->set_cell(i + 2, j + 1, tableWidget->item(i, j)->text());
+                this->setCell(i + 2, j + 1, tableWidget->item(i, j)->text());
             }
         }
     }
@@ -328,7 +330,7 @@ bool BikoQtExcelEngine::writeTableWidget(QTableWidget *tableWidget)
   *@return 导入成功与否 true : 成功
   *                   false: 失败
   */
-bool BikoQtExcelEngine::readTableWidget(QTableWidget *tableWidget)
+bool QtAxExcelEngine::readTableWidget(QTableWidget *tableWidget)
 {
     if ( NULL == tableWidget )
     {
@@ -382,7 +384,7 @@ bool BikoQtExcelEngine::readTableWidget(QTableWidget *tableWidget)
 }
 
 
-QVariant BikoQtExcelEngine::get_cell(int row, int column)
+QVariant QtAxExcelEngine::getCell(int row, int column)
 {
     QVariant data;
 
@@ -403,7 +405,7 @@ QVariant BikoQtExcelEngine::get_cell(int row, int column)
   *@return 修改是否成功 true : 成功
   *                   false: 失败
   */
-bool BikoQtExcelEngine::set_cell(int row, int column, const QVariant &data)
+bool QtAxExcelEngine::setCell(int row, int column, const QVariant &data)
 {
     bool op = false;
 
@@ -425,7 +427,7 @@ bool BikoQtExcelEngine::set_cell(int row, int column, const QVariant &data)
 /**
   *@brief 清空除报表之外的数据
   */
-void BikoQtExcelEngine::clear()
+void QtAxExcelEngine::clear()
 {
     xls_file_     = "";
     row_count_    = 0;
@@ -439,7 +441,7 @@ void BikoQtExcelEngine::clear()
   *@return true : 已打开
   *        false: 未打开
   */
-bool BikoQtExcelEngine::is_open()
+bool QtAxExcelEngine::is_open()
 {
     return is_open_;
 }
@@ -449,15 +451,14 @@ bool BikoQtExcelEngine::is_open()
   *@return true : 可用
   *        false: 不可用
   */
-bool BikoQtExcelEngine::is_valid()
+bool QtAxExcelEngine::is_valid()
 {
     return is_valid_;
 }
 
-/**
-  *@brief 获取excel的行数
-  */
-int BikoQtExcelEngine::row_count()const
+
+//获取excel的行数
+int QtAxExcelEngine::rowCount()const
 {
     return row_count_;
 }
@@ -465,25 +466,25 @@ int BikoQtExcelEngine::row_count()const
 /**
   *@brief 获取excel的列数
   */
-int BikoQtExcelEngine::column_count()const
+int QtAxExcelEngine::columnCount()const
 {
     return column_count_;
 }
 
 //
-void BikoQtExcelEngine::insertSheet(const QString &sheet_name)
+void QtAxExcelEngine::insertSheet(const QString &sheet_name)
 {
     work_sheets_->querySubObject("Add()");
     QAxObject *a = work_sheets_->querySubObject("Item(int)", 1);
     a->setProperty("Name", sheet_name);
     active_sheet_ = a;
 
-    load_sheet_internal();
+    loadSheet_internal(false);
 }
 
 
 //取得列的名称，比如27->AA
-char *BikoQtExcelEngine::column_name(int column_no)
+QString QtAxExcelEngine::columnName(int column_no)
 {
     static char column_name[64];
     size_t str_len = 0;
