@@ -36,8 +36,9 @@ int main(int argc, char *argv[])
 	{
 		fprintf(stderr, "initialize excel fail.\n");
 	}
+	
 	//测试相对路径打开，
-	bret = excel_engine.open(".\\excel\\example01.xlsx",false);
+	bret = excel_engine.open(".\\excel\\example01.xlsx");
 	if (!bret)
 	{
 		fprintf(stderr, "Open excel fail.\n");
@@ -81,8 +82,9 @@ int main(int argc, char *argv[])
 	}
 
 	fprintf(stderr, "=======================================.\n");
+	
 	//测试相对路径打开，
-	bret = excel_engine.open(".\\excel\\example02.xlsx", true);
+	bret = excel_engine.newOne();
 	if (!bret)
 	{
 		fprintf(stderr, "Open excel fail.\n");
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
 	excel_engine.setCell(1, 2, 2);
 	excel_engine.setCell(1, 3, 3);
 	excel_engine.setCell(1, 4, 4);
-	excel_engine.save();
+	excel_engine.saveAs("E:\\example02");
 
 	excel_engine.finalize();
 
