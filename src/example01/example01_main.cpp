@@ -37,10 +37,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "initialize excel fail.\n");
 	}
 	//测试相对路径打开，
-	bret = excel_engine.open(".\\excel\\example01.xlsx");
+	bret = excel_engine.open(".\\excel\\example01.xlsx",false);
 	if (!bret)
 	{
 		fprintf(stderr, "Open excel fail.\n");
+		return 0;
 	}
 
 	//测试使用非预加载 load一个sheet
@@ -79,7 +80,21 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	
+	fprintf(stderr, "=======================================.\n");
+	//测试相对路径打开，
+	bret = excel_engine.open(".\\excel\\example02.xlsx", true);
+	if (!bret)
+	{
+		fprintf(stderr, "Open excel fail.\n");
+	}
+	excel_engine.insertSheet("ABCDEFG");
+
+	excel_engine.setCell(1, 1, 1);
+	excel_engine.setCell(1, 2, 2);
+	excel_engine.setCell(1, 3, 3);
+	excel_engine.setCell(1, 4, 4);
+	excel_engine.save();
+
 	excel_engine.finalize();
 
 	return a.quit();
