@@ -58,6 +58,7 @@ void QtAxExcelEngine::finalize()
         excel_instance_ = NULL;
 
         is_open_ = false;
+		is_newfile_ = false;
 
 		row_count_ = 0;
 		column_count_ = 0;
@@ -71,20 +72,26 @@ void QtAxExcelEngine::finalize()
 }
 
 //打开EXCEL文件
-bool QtAxExcelEngine::open(const QString &xls_file)
+bool QtAxExcelEngine::open(const QString &xls_file,
+						   bool not_exist_new)
 {
+	bool new_file = false;
     //如果指向的文件不存在，则需要新建一个
     QFileInfo fi(xls_file);
     if ( false == fi.exists())
     {
-		return false;
+		if (false == not_exist_new)
+		{
+			return false;
+		}
+		new_file = true;
     }
     
 	//得到绝对路径，因为ActiveX只支持绝对路径，包括Open，包括Saveas,不光必须用绝对路径，还需要实用
 	// 原生的路径分割符号 '\'
 	xls_file_ = QDir::toNativeSeparators(fi.absoluteFilePath());
 
-	return opennew_internal(false);
+	return opennew_internal(new_file);
 }
 
 //新建一个XLS文件
@@ -106,7 +113,6 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 		close();
 	}
 
-
 	work_books_ = excel_instance_->querySubObject("WorkBooks");
 	if (!new_file)
 	{
@@ -114,6 +120,7 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 		active_book_ = work_books_->querySubObject("Open(const QString&,QVariant)",
 												   xls_file_,
 												   0);
+		is_newfile_ = true;
 	}
 	else
 	{
@@ -131,9 +138,7 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 	return true;
 }
 
-/**
-  *@brief 保存表格数据，把数据写入文件
-  */
+//保存表格数据，把数据写入文件
 void QtAxExcelEngine::save()
 {
     if ( active_book_ )
@@ -144,10 +149,23 @@ void QtAxExcelEngine::save()
 	{
 		return;
 	}
-	active_book_->dynamicCall("Save()");
+	//如果已经保存
+	if (isSaved())
+	{
+		return;
+	}
+	if (is_newfile_)
+	{
+		active_book_->dynamicCall("SaveAs(const QString&)", xls_file_);
+		is_newfile_ = false;
+	}
+	else
+	{
+		active_book_->dynamicCall("Save()");
+	}
 }
 
-//!
+//另存为
 void QtAxExcelEngine::saveAs(const QString &xls_file)
 {
 	QFileInfo fi(xls_file);
@@ -157,6 +175,7 @@ void QtAxExcelEngine::saveAs(const QString &xls_file)
 	xls_file_ = QDir::toNativeSeparators(fi.absoluteFilePath());
 	/*如果该文档是新建出来的，则使用另存为COM接口*/
 	active_book_->dynamicCall("SaveAs(const QString&)", xls_file_);
+	is_newfile_ = false;
 }
 
 //关闭打开的EXCEL,
@@ -176,7 +195,7 @@ void QtAxExcelEngine::close()
 //
 int QtAxExcelEngine::sheetsCount()
 {
-    return work_books_->property("Count").toInt();
+    return work_sheets_->property("Count").toInt();
 }
 
 //得到某个sheet的名字
@@ -276,8 +295,11 @@ void QtAxExcelEngine::loadSheet_internal(bool pre_load)
 //插入一个SHEET
 void QtAxExcelEngine::insertSheet(const QString &sheet_name)
 {
-	work_sheets_->querySubObject("Add()");
-	active_sheet_ = active_book_->querySubObject("Worksheets(int)", 1);
+	active_sheet_ = work_sheets_->querySubObject("Add()");
+	if (!active_sheet_)
+	{
+		return;
+	}
 	active_sheet_->setProperty("Name", sheet_name);
 
 	row_count_ = 0;
@@ -457,12 +479,15 @@ bool QtAxExcelEngine::setCell(int row, int column, const QVariant &data)
 	return op;
 }
 
-
-
 //判断excel是否已被打开
-bool QtAxExcelEngine::is_open()
+bool QtAxExcelEngine::isOpen()
 {
     return is_open_;
+}
+
+bool QtAxExcelEngine::isSaved()
+{
+	return active_book_->property("Saved").toBool();
 }
 
 //获取excel的行数,包括空行 

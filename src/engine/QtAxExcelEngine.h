@@ -106,14 +106,16 @@ public:
 	* @brief      打开一个XLS文件,文件不存在或者打开失败返回false,不会新建
 	* @return     bool          true表示打开成功
 	* @param      xls_file      打开的文件名称,
+	* @param      not_exist_new 如果要打开的文件不存在，是否新建
 	*/
-	bool open(const QString &xls_file);
+	bool open(const QString &xls_file,
+			  bool not_exist_new);
 	
-    //保存xls报表
-    void save();
-
 	//!新建一个XLS文件
 	bool newOne();
+
+	//保存xls报表
+	void save();
 	//!
 	void saveAs(const QString &xls_file);
 
@@ -209,9 +211,11 @@ public:
 	//!当前的Sheet的起始列数，如果第1,2,3列是空，没有数据，那么返回4
 	int startColumn() const;
 
-
-    bool is_open();
-
+	//!是否打开了一个EXCEL
+    bool isOpen();
+	
+	//!当前book 是否保存了。
+	bool isSaved();
 protected:
 
     //!加载，内部函数，以后可以考虑增加一个预加载，加快读取速度。
@@ -268,6 +272,9 @@ private:
 
     //!是否已打开
     bool is_open_ = false;
+
+	//是否是一个新建的文件
+	bool is_newfile_ = false;
 
 };
 
