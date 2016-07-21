@@ -8,11 +8,7 @@ QtAxExcelEngine::QtAxExcelEngine()
 
 QtAxExcelEngine::~QtAxExcelEngine()
 {
-    if ( is_open_ )
-    {
-        //析构前，先保存数据，然后关闭workbook
-        close();
-    }
+
     finalize();
 }
 
@@ -51,6 +47,10 @@ void QtAxExcelEngine::finalize()
     {
 		if (excel_instance_->isNull() == false)
 		{
+			if (is_open_)
+			{
+				close();
+			}
 			excel_instance_->dynamicCall("Quit()");
 		}
 
@@ -65,7 +65,7 @@ void QtAxExcelEngine::finalize()
 		start_row_ = 1;
 		start_column_ = 1;
 
-		xls_file_ = "";
+		xls_file_.clear();
     }
 
     ::CoUninitialize();
@@ -125,13 +125,13 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 		work_books_->dynamicCall("Open(const QString&)",
 								 xls_file_);
 		active_book_ = excel_instance_->querySubObject("ActiveWorkBook");
-		is_newfile_ = true;
 	}
 	else
 	{
 		//新建一个xls，添加一个新的工作薄
 		work_books_->dynamicCall("Add()");
 		active_book_ = excel_instance_->querySubObject("ActiveWorkBook");
+		is_newfile_ = true;
 	}
 
 	if (!active_book_)
@@ -146,7 +146,7 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 //保存表格数据，把数据写入文件
 void QtAxExcelEngine::save()
 {
-    if ( active_book_ )
+    if (!active_book_)
     {
 		return;
     }
