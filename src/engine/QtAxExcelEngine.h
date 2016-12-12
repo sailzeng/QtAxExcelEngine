@@ -187,7 +187,6 @@ public:
     * @note
     */
     QVariant getCell(int row, int column);
-
     
     /*!
     * @brief      修改指定单元数据
@@ -197,6 +196,21 @@ public:
     * @param      data   修改的数据
     */
     bool  setCell(int row, int column, const QVariant &data);
+
+	
+	//
+	void getRangecell(int cell1_row,
+					  int cell1_column,
+					  int cell2_row,
+					  int cell2_column, 
+					  QVariantList &data_list);
+	//
+	bool setRangeCell(int cell1_row,
+					  int cell1_column,
+					  int cell2_row,
+					  int cell2_column,
+					  const QVariantList &data_list);
+
 
     //!打开的xls文件名称
     QString openFilename() const;
@@ -216,6 +230,7 @@ public:
 	
 	//!当前book 是否保存了。
 	bool isSaved();
+
 protected:
 
     //!加载，内部函数，以后可以考虑增加一个预加载，加快读取速度。
@@ -234,6 +249,9 @@ public:
     static QString columnName(int column_no);
 
 private:
+
+	//!COMM是否是自己初始化的，因为多个实例等情况下，可能是人家初始化的，这时候退出是不主动释放
+	bool com_init_byself_ = false;
 
     //!指向整个excel应用程序
     QAxObject *excel_instance_ = NULL;

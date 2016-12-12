@@ -8,11 +8,6 @@ QtAxExcelEngine::QtAxExcelEngine()
 
 QtAxExcelEngine::~QtAxExcelEngine()
 {
-    if ( is_open_ )
-    {
-        //析构前，先保存数据，然后关闭workbook
-        close();
-    }
     finalize();
 }
 
@@ -22,18 +17,30 @@ bool QtAxExcelEngine::initialize(bool visible)
 {
 
     HRESULT r = ::CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    if (r != S_OK && r != S_FALSE)
+    if (r == S_OK )
     {
-        qDebug("Qt: Could not initialize OLE (error %x)", (unsigned int)r);
-        return false;
+		com_init_byself_ = true;
     }
+	else
+	{
+		fprintf(stderr, "QtActiveX: Could not initialize OLE CoInitializeEx (ret %x error %x) .\n",
+			(unsigned int)r,
+				::GetLastError());
+		if (r == S_FALSE || r == RPC_E_CHANGED_MODE)
+		{
+			//如果是这个错误，放弃，没啥忍了
+		}
+	}
     is_visible_ = visible;
     //
     if (NULL == excel_instance_)
     {
+		//OLE启动EXCEL 很容易被其他东西破坏，实在没有法子。比如你安装了WPS,
         excel_instance_ = new QAxObject("Excel.Application");
         if (excel_instance_->isNull())
         {
+			fprintf(stderr, "QtActiveX: new OLE Excel.Application fail, ensure your computer install EXCEL.\n"
+				);
             is_open_ = false;
             return is_open_;
         }
@@ -51,6 +58,10 @@ void QtAxExcelEngine::finalize()
     {
 		if (excel_instance_->isNull() == false)
 		{
+			if (is_open_)
+			{
+				close();
+			}
 			excel_instance_->dynamicCall("Quit()");
 		}
 
@@ -65,10 +76,13 @@ void QtAxExcelEngine::finalize()
 		start_row_ = 1;
 		start_column_ = 1;
 
-		xls_file_ = "";
+		xls_file_.clear();
     }
-
-    ::CoUninitialize();
+	if (com_init_byself_)
+	{
+		::CoUninitialize();
+	}
+    
 }
 
 //打开EXCEL文件
@@ -116,17 +130,24 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 	work_books_ = excel_instance_->querySubObject("WorkBooks");
 	if (!new_file)
 	{
+		//这儿原来的代码是下面这样的，但是在我的两台机器都出现了返回为NULL的问题，而且会出现提示错误
+		//其中一台，我反复折腾后正常，但另外一台死活不对，
+		//QAxBase: error calling idispatch member open: unknown error
+		//出错代码如下，
+		//active_book_ = excel_instance_->querySubObject("Open(const QString&)",xls_file_);
+		//但其实，应该问题不大,或者说带病可以运行下去，我们把代码改成如下，规避了这个问题，但仍然有提示
+
 		//打开xls对应的，获取工作簿,注意，要用绝对路径
-		active_book_ = work_books_->querySubObject("Open(const QString&,QVariant)",
-												   xls_file_,
-												   0);
-		is_newfile_ = true;
+		work_books_->dynamicCall("Open(const QString&)",
+								 xls_file_);
+		active_book_ = excel_instance_->querySubObject("ActiveWorkBook");
 	}
 	else
 	{
 		//新建一个xls，添加一个新的工作薄
 		work_books_->dynamicCall("Add()");
 		active_book_ = excel_instance_->querySubObject("ActiveWorkBook");
+		is_newfile_ = true;
 	}
 
 	if (!active_book_)
@@ -141,7 +162,7 @@ bool QtAxExcelEngine::opennew_internal(bool new_file)
 //保存表格数据，把数据写入文件
 void QtAxExcelEngine::save()
 {
-    if ( active_book_ )
+    if (!active_book_)
     {
 		return;
     }
@@ -226,7 +247,7 @@ bool QtAxExcelEngine::loadSheet(int sheet_index,
 
 
 
-//按照序号加载Sheet表格,
+//按照sheet名字加载Sheet表格,
 bool QtAxExcelEngine::loadSheet(const QString &sheet_name,
 								bool pre_load)
 {
@@ -268,6 +289,7 @@ void QtAxExcelEngine::loadSheet_internal(bool pre_load)
 		start_column_ = used_range->property("Column").toInt();
 
 		//获取行数，便于理解，也算上了空行，否则各种地方坐标理解还不一致。
+		//rows->property("Count").toInt()返回的是真实使用了的行数
 		row_count_ = rows->property("Count").toInt() + start_row_ - 1;
 		//获取列数
 		column_count_ = columns->property("Count").toInt() + start_column_ - 1;
@@ -516,8 +538,6 @@ int QtAxExcelEngine::startColumn() const
 }
 
 
-
-
 //取得列的名称，比如27->AA
 QString QtAxExcelEngine::columnName(int column_no)
 {
@@ -542,4 +562,23 @@ QString QtAxExcelEngine::columnName(int column_no)
     strrev(column_name);
 
     return column_name;
+}
+
+void QtAxExcelEngine::getRangecell(int cell1_row,
+				  int cell1_column,
+				  int cell2_row,
+				  int cell2_column,
+				  QVariantList &data_list)
+{
+
+}
+
+
+bool QtAxExcelEngine::setRangeCell(int cell1_row,
+				  int cell1_column,
+				  int cell2_row,
+				  int cell2_column,
+				  const QVariantList &data_list)
+{
+
 }
