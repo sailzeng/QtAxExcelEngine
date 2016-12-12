@@ -8,6 +8,11 @@ QtAxExcelEngine::QtAxExcelEngine()
 
 QtAxExcelEngine::~QtAxExcelEngine()
 {
+<<<<<<< .mine
+
+=======
+
+>>>>>>> .theirs
     finalize();
 }
 
