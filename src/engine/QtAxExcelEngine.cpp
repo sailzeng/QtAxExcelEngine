@@ -8,11 +8,6 @@ QtAxExcelEngine::QtAxExcelEngine()
 
 QtAxExcelEngine::~QtAxExcelEngine()
 {
-<<<<<<< .mine
-
-=======
-
->>>>>>> .theirs
     finalize();
 }
 
@@ -49,8 +44,8 @@ bool QtAxExcelEngine::initialize(bool visible)
             is_open_ = false;
             return is_open_;
         }
-
-        excel_instance_->dynamicCall("SetVisible(bool)", is_visible_);
+		//在部分机器的DEBUG版本发现有断言错误，参数数量不一致，原因未知，
+        excel_instance_->dynamicCall("SetVisible(bool )", is_visible_);
     }
     return true;
 }
@@ -83,6 +78,7 @@ void QtAxExcelEngine::finalize()
 
 		xls_file_.clear();
     }
+	//不是自己初始化的，步销毁，否则有问题
 	if (com_init_byself_)
 	{
 		::CoUninitialize();
@@ -569,6 +565,14 @@ QString QtAxExcelEngine::columnName(int column_no)
     return column_name;
 }
 
+//取得cell的名称。比如第一个cell是A1
+QString QtAxExcelEngine::cellsName(int row_no, int column_no)
+{
+    return QString("%1%2")
+        .arg(QtAxExcelEngine::columnName(column_no))
+        .arg(row_no);
+}
+
 void QtAxExcelEngine::getRangecell(int cell1_row,
 				  int cell1_column,
 				  int cell2_row,
@@ -585,5 +589,5 @@ bool QtAxExcelEngine::setRangeCell(int cell1_row,
 				  int cell2_column,
 				  const QVariantList &data_list)
 {
-
+    return false;
 }

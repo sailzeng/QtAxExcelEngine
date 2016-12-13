@@ -248,6 +248,15 @@ public:
     */
     static QString columnName(int column_no);
 
+
+    /*!
+    * @brief      取得Cell的名称，比如第1行1列cell是A1,第5行5列是E5，注意输出的是列号在前面
+    * @return     QString
+    * @param      row_no
+    * @param      column_no
+    */
+    static QString cellsName(int row_no, int column_no);
+
 private:
 
 	//!COMM是否是自己初始化的，因为多个实例等情况下，可能是人家初始化的，这时候退出是不主动释放
