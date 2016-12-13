@@ -52,6 +52,8 @@
 #define _CRT_SECURE_NO_DEPRECATE  1
 #endif
 
+#include <memory>
+
 #include <windows.h>
 
 #pragma warning ( push )

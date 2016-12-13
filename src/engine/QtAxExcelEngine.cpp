@@ -300,7 +300,8 @@ void QtAxExcelEngine::loadSheet_internal(bool pre_load)
 		//预加载的数据，存放
 		if (pre_load)
 		{
-			QVariantList row_list = used_range->property("Value2").toList();
+			//Value2 and Value 的区别是
+			QVariantList row_list = used_range->property("Value").toList();
 			//第一次转换得到的行数据，需要再取一次.实际测试，如果只有1,1一个数据，也不会进入预加载代码
 			for (int i = 0; i < row_list.size(); ++i)
 			{
@@ -345,9 +346,9 @@ void QtAxExcelEngine::renameSheet(const QString & new_name)
 
 
 //把tableWidget中的数据保存到excel中
-bool QtAxExcelEngine::writeTableWidget(QTableWidget *tableWidget)
+bool QtAxExcelEngine::writeTableWidget(QTableWidget *table_widget)
 {
-    if ( NULL == tableWidget )
+    if ( NULL == table_widget )
     {
         return false;
     }
@@ -356,15 +357,15 @@ bool QtAxExcelEngine::writeTableWidget(QTableWidget *tableWidget)
         return false;
     }
 
-    int tableR = tableWidget->rowCount();
-    int tableC = tableWidget->columnCount();
+    int tableR = table_widget->rowCount();
+    int tableC = table_widget->columnCount();
 
     //获取表头写做第一行
     for (int i = 0; i < tableC; i++)
     {
-        if ( tableWidget->horizontalHeaderItem(i) != NULL )
+        if ( table_widget->horizontalHeaderItem(i) != NULL )
         {
-            this->setCell(1, i + 1, tableWidget->horizontalHeaderItem(i)->text());
+            this->setCell(1, i + 1, table_widget->horizontalHeaderItem(i)->text());
         }
     }
 
@@ -373,9 +374,9 @@ bool QtAxExcelEngine::writeTableWidget(QTableWidget *tableWidget)
     {
         for (int j = 0; j < tableC; j++)
         {
-            if ( tableWidget->item(i, j) != NULL )
+            if ( table_widget->item(i, j) != NULL )
             {
-                this->setCell(i + 2, j + 1, tableWidget->item(i, j)->text());
+                this->setCell(i + 2, j + 1, table_widget->item(i, j)->text());
             }
         }
     }
@@ -392,58 +393,53 @@ bool QtAxExcelEngine::writeTableWidget(QTableWidget *tableWidget)
   *@return 导入成功与否 true : 成功
   *                   false: 失败
   */
-bool QtAxExcelEngine::readTableWidget(QTableWidget *tableWidget)
+bool QtAxExcelEngine::readTableWidget(QTableWidget *table_widget)
 {
-    if ( NULL == tableWidget )
+    if ( NULL == table_widget )
     {
         return false;
     }
 
     //先把table的内容清空
-    int tableColumn = tableWidget->columnCount();
-    tableWidget->clear();
+    int tableColumn = table_widget->columnCount();
+    table_widget->clear();
     for (int n = 0; n < tableColumn; n++)
     {
-        tableWidget->removeColumn(0);
+        table_widget->removeColumn(0);
     }
 
     //获取excel中的第一行数据作为表头
     QStringList headerList;
     for (int n = start_column_; n <= column_count_; n++ )
     {
-        QAxObject *cell = active_sheet_->querySubObject("Cells(int,int)", start_row_, n);
-        if ( cell )
-        {
-            headerList << cell->dynamicCall("Value2()").toString();
-        }
+		headerList << getCell(start_row_, n).toString();
     }
 
     //重新创建表头
-    tableWidget->setColumnCount(column_count_ - start_column_ +1);
-    tableWidget->setHorizontalHeaderLabels(headerList);
-
+    table_widget->setColumnCount(column_count_ - start_column_ +1);
+    table_widget->setHorizontalHeaderLabels(headerList);
 
     //插入新数据
 	//行
     for (int i = start_row_ + 1, r = 0; i <= row_count_; i++, r++ )   
     {
 		//插入新行
-        tableWidget->insertRow(r); 
+        table_widget->insertRow(r); 
 		//列
         for (int j = start_column_, c = 0; j <= column_count_; j++, c++ )   
         {
-            QAxObject *cell = active_sheet_->querySubObject("Cells(int,int)", i, j ); //获取单元格
-
-            //在r新行中添加子项数据
-            if ( cell )
-            {
-                tableWidget->setItem(r, c, new QTableWidgetItem(cell->property("Value2").toString()));
-            }
+			table_widget->setItem(r, c, new QTableWidgetItem(getCell(i, j).toString()));
         }
     }
 
     return true;
 }
+
+//Dim rng As Range : Set rng = Application.Range("$A$1")
+//Debug.Print rng.Value             0.1429
+//Debug.Print rng.Value2            0.142857142857143
+//Debug.Print rng.Text              $0.14
+
 
 //得到某个cell的数据
 QVariant QtAxExcelEngine::getCell(int row, int column)
@@ -467,9 +463,10 @@ QVariant QtAxExcelEngine::getCell(int row, int column)
 	{
 		//获取单元格对象
 		QAxObject *cell = active_sheet_->querySubObject("Cells(int,int)", row, column);
+		std::unique_ptr<QAxObject> del_it(cell);
 		if (cell)
 		{
-			return cell->property("Value2");
+			return cell->property("Value");
 		}
 		else
 		{
@@ -482,24 +479,20 @@ QVariant QtAxExcelEngine::getCell(int row, int column)
 //修改指定单元格的数据
 bool QtAxExcelEngine::setCell(int row, int column, const QVariant &data)
 {
-	bool op = false;
+	
 	//获取单元格对象
 	QAxObject *cell = active_sheet_->querySubObject("Cells(int,int)",
 													row,
 													column);
-	//excel 居然只能插入字符串和整型，浮点型无法插入
-	if (cell)
+	if (!cell)
 	{
-		QString strData = data.toString();
-		cell->dynamicCall("SetValue(const QVariant&)", strData); //修改单元格的数据
-		op = true;
-	}
-	else
-	{
-		op = false;
+		return false;
 	}
 
-	return op;
+	//修改单元格的数据
+	QString strData = data.toString();
+	cell->dynamicCall("SetValue(const QVariant&)", strData);
+	return true;
 }
 
 //判断excel是否已被打开
@@ -579,7 +572,17 @@ void QtAxExcelEngine::getRangecell(int cell1_row,
 				  int cell2_column,
 				  QVariantList &data_list)
 {
-
+	data_list.clear();
+	QAxObject *range = active_sheet_->querySubObject("Range(const QString&, const QString&)",
+													 QtAxExcelEngine::cellsName(cell1_row, cell1_column),
+													 QtAxExcelEngine::cellsName(cell2_row, cell2_column));
+	
+	if (!range)
+	{
+		return;
+	}
+	data_list.reserve((cell2_row - cell1_row + 1) * (cell2_column - cell1_column + 1));
+	data_list = range->property("Value").toList();
 }
 
 
@@ -589,5 +592,14 @@ bool QtAxExcelEngine::setRangeCell(int cell1_row,
 				  int cell2_column,
 				  const QVariantList &data_list)
 {
+	QAxObject *range = active_sheet_->querySubObject("Range(const QString&, const QString&)",
+													 QtAxExcelEngine::cellsName(cell1_row, cell1_column),
+													 QtAxExcelEngine::cellsName(cell2_row, cell2_column));
+	if (!range)
+	{
+		range->dynamicCall("SetValue(const QVariant&)", QVariant(data_list));
+		return false;
+	}
+
     return false;
 }
