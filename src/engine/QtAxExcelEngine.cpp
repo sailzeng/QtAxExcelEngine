@@ -357,11 +357,11 @@ bool QtAxExcelEngine::writeTableWidget(QTableWidget *table_widget)
         return false;
     }
 
-    int tableR = table_widget->rowCount();
-    int tableC = table_widget->columnCount();
+    int table_row = table_widget->rowCount();
+    int table_column = table_widget->columnCount();
 
     //获取表头写做第一行
-    for (int i = 0; i < tableC; i++)
+    for (int i = 0; i < table_column; i++)
     {
         if ( table_widget->horizontalHeaderItem(i) != NULL )
         {
@@ -370,9 +370,9 @@ bool QtAxExcelEngine::writeTableWidget(QTableWidget *table_widget)
     }
 
     //写数据
-    for (int i = 0; i < tableR; i++)
+    for (int i = 0; i < table_row; i++)
     {
-        for (int j = 0; j < tableC; j++)
+        for (int j = 0; j < table_column; j++)
         {
             if ( table_widget->item(i, j) != NULL )
             {
@@ -383,8 +383,55 @@ bool QtAxExcelEngine::writeTableWidget(QTableWidget *table_widget)
 
     //保存
     save();
-
     return true;
+}
+
+
+bool QtAxExcelEngine::writeTableWidget2(QTableWidget *table_widget)
+{
+	if (NULL == table_widget)
+	{
+		return false;
+	}
+	if (!is_open_)
+	{
+		return false;
+	}
+	int table_row = table_widget->rowCount();
+	int table_column = table_widget->columnCount();
+
+	QVariantList data_list;
+	data_list.reserve( (table_row + 1)*table_column);
+
+	for (int i = 0; i < table_column; i++)
+	{
+		if (table_widget->horizontalHeaderItem(i) != NULL)
+		{
+			data_list.push_back(table_widget->horizontalHeaderItem(i)->text()) ;
+		}
+		else
+		{
+			data_list.push_back(QVariant());
+		}
+	}
+
+	for (int i = 0; i < table_row; i++)
+	{
+		for (int j = 0; j < table_column; j++)
+		{
+			if (table_widget->item(i, j) != NULL)
+			{
+				data_list.push_back(table_widget->item(i, j)->text());
+			}
+			else
+			{
+				data_list.push_back(QVariant());
+			}
+		}
+	}
+
+	setRangeCell(1, 1, table_row + 2, table_column + 1, data_list);
+	return true;
 }
 
 /**
@@ -592,14 +639,17 @@ bool QtAxExcelEngine::setRangeCell(int cell1_row,
 				  int cell2_column,
 				  const QVariantList &data_list)
 {
+	qDebug("Cell1 name %s Cell2 name %s ,data size %d",
+		   QtAxExcelEngine::cellsName(cell1_row, cell1_column).toStdString().c_str(),
+		   QtAxExcelEngine::cellsName(cell2_row, cell2_column).toStdString().c_str(),
+		   data_list.size());
 	QAxObject *range = active_sheet_->querySubObject("Range(const QString&, const QString&)",
 													 QtAxExcelEngine::cellsName(cell1_row, cell1_column),
 													 QtAxExcelEngine::cellsName(cell2_row, cell2_column));
 	if (!range)
 	{
-		range->dynamicCall("SetValue(const QVariant&)", QVariant(data_list));
 		return false;
 	}
-
+	range->dynamicCall("SetValue(const QVariant&)", QVariant(data_list));
     return false;
 }

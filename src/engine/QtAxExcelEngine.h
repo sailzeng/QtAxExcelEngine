@@ -178,6 +178,9 @@ public:
     */
     bool writeTableWidget(QTableWidget *table_widget);
 
+	//用批处理的方式写入EXCEL
+	bool writeTableWidget2(QTableWidget *table_widget);
+
     //从xls读取数据到ui
     bool readTableWidget(QTableWidget *table_widget);
 
