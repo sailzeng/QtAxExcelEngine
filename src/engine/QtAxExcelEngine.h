@@ -214,7 +214,7 @@ public:
 					  int cell1_column,
 					  int cell2_row,
 					  int cell2_column,
-					  const QVariantList &data_list);
+					  const QVariantList &data_table);
 
 
     //!打开的xls文件名称
