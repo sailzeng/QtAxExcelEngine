@@ -15,16 +15,19 @@
 *
 *
 *
-* @note       ExcelEngine类只负责读/写数据，不负责解析，做中间层
+* @note       QtAxExcelEngine类只负责读/写数据，不负责解析，做中间层
 *
-* @history
+* @history 
 * @author     yaoboyuan 254200341@qq.com
 * @date       2012-4-12
 * @note       原创
 * @author     Sailzeng 改写 <sailerzeng@gmail.com>
 * @data       2016-6-7 端午节前夕
 * @note       对原有的代码做了一些改动，更加符合Qt的编码格式等。
-*             增加了一些常用函数，更加方便实用
+*             增加了一些功能，以及常用函数，更加方便实用
+* @author     Sailzeng 改写 <sailerzeng@gmail.com>
+* @data       2016-12-16 
+* @note       参考 hearstzhang GG 实现，增加了批处理写入的功能，大幅提升了写入速度
 *
 */
 
@@ -134,19 +137,19 @@ public:
     * @brief      根据索引加载sheet，
     * @return     bool 返回是否成功加载
     * @param      sheet_index sheet索引，从1开始
-	* @param      pre_load 是否进行预加载，预加载会读取整个EXCEL的sheet表，加快后面的读取处理
+	* @param      pre_read 是否进行预加载，预加载会读取整个EXCEL的sheet表，加快后面的读取处理
     */
     bool loadSheet(int sheet_index,
-				   bool pre_load = false);
+				   bool pre_read = false);
 
     /*!
     * @brief      根据sheet表格表名加载sheet，
     * @return     bool 返回是否成功加载
     * @param      sheet_name 要加载的sheet 的名字
-	* @param      pre_load 是否进行预加载，预加载会读取整个EXCEL的sheet表，加快后面的读取处理
+	* @param      pre_load 是否进行预加载，预加载会读取整个EXCEL的sheet表，加快后面的读取处理，预加载最好是只读时使用
     */
     bool loadSheet(const QString &sheet_name,
-				   bool pre_load = false);
+				   bool pre_read = false);
 
 
     /*!
@@ -172,14 +175,11 @@ public:
 
 
     /*!
-    * @brief      把tableWidget中的数据保存到excel中
+    * @brief      把table_widget中的数据保存到excel中，
     * @return     bool
     * @param      table_widget
     */
     bool writeTableWidget(QTableWidget *table_widget);
-
-	//用批处理的方式写入EXCEL
-	bool writeTableWidget2(QTableWidget *table_widget);
 
     //从xls读取数据到ui
     bool readTableWidget(QTableWidget *table_widget);
@@ -202,14 +202,21 @@ public:
     */
     bool  setCell(int row, int column, const QVariant &data);
 
-	
-	//
+    /*!
+    * @brief      从一个RANGE中读取sheet的数据，
+    * @param      cell1_row     range的起始点，左上的行号
+    * @param      cell1_column  range的起始点，左上的列号
+    * @param      cell2_row     range的结束点，右下的行号
+    * @param      cell2_column  range的结束点，右下的列号
+    * @param      data_table  要写入的数据，data_table是一个table，也就是QVariantList(行)套QVariantList(列)
+    */
 	void getRangecell(int cell1_row,
 					  int cell1_column,
 					  int cell2_row,
 					  int cell2_column, 
-					  QVariantList &data_list);
-	//
+					  QVariantList &data_table);
+
+	//向一个RANGE中写入sheet的数据，QVariantList是一个table，也就是List套List
 	bool setRangeCell(int cell1_row,
 					  int cell1_column,
 					  int cell2_row,

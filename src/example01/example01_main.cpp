@@ -99,31 +99,44 @@ int main(int argc, char *argv[])
 	excel_engine.setCell(1, 4, 4);
 
 	excel_engine.insertSheet("HIJKLMN");
+    QVariantList data_table;
 	QVariantList data_list;
 	data_list.push_back(QString("A"));
 	data_list.push_back(QString("B"));
 	data_list.push_back(QString("C"));
 	data_list.push_back(QString("D"));
+    data_table.push_back(data_list);
+    data_list.clear();
+    
 	data_list.push_back(QString("1"));
 	data_list.push_back(QString("2"));
 	data_list.push_back(QString("3"));
 	data_list.push_back(QString("4"));
+    data_table.push_back(data_list);
+    data_list.clear();
+    
 	data_list.push_back(QString("H"));
 	data_list.push_back(QString("I"));
 	data_list.push_back(QString("J"));
 	data_list.push_back(QString("K"));
+    data_table.push_back(data_list);
+    data_list.clear();
+    
 	data_list.push_back(QString("5"));
 	data_list.push_back(QString("6"));
 	data_list.push_back(QString("7"));
 	data_list.push_back(QString("8"));
+    data_table.push_back(data_list);
+    data_list.clear();
+    
 	fprintf(stderr, "=======================================.\n");
-	for (int k = 0; k < data_list.size(); ++k)
-	{
-		fprintf(stderr, " data list %d  string:[%s].\n",
-				k,
-				data_list[k].toString().toStdString().c_str());
-	}
-	excel_engine.setRangeCell(1,1,4,4, data_list);
+	//for (int k = 0; k < data_list.size(); ++k)
+	//{
+	//	fprintf(stderr, " data list %d  string:[%s].\n",
+	//			k,
+	//			data_list[k].toString().toStdString().c_str());
+	//}
+	excel_engine.setRangeCell(1,1,4,4, data_table);
 
 	excel_engine.saveAs(".\\excel\\example02.xlsx");
 

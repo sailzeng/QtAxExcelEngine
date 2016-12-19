@@ -233,7 +233,7 @@ bool QtAxExcelEngine::sheetName(int sheet_index, QString &sheet_name)
 }
 
 bool QtAxExcelEngine::loadSheet(int sheet_index,
-								bool pre_load)
+								bool pre_read)
 {
     active_sheet_ = active_book_->querySubObject("WorkSheets(int)", sheet_index);
 
@@ -242,7 +242,7 @@ bool QtAxExcelEngine::loadSheet(int sheet_index,
     {
         return false;
     }
-    loadSheet_internal(pre_load);
+    loadSheet_internal(pre_read);
     return true;
 }
 
@@ -250,7 +250,7 @@ bool QtAxExcelEngine::loadSheet(int sheet_index,
 
 //按照sheet名字加载Sheet表格,
 bool QtAxExcelEngine::loadSheet(const QString &sheet_name,
-								bool pre_load)
+								bool pre_read)
 {
     active_sheet_ = active_book_->querySubObject("WorkSheets(QString)", sheet_name);
     //如果没有打开，
@@ -258,7 +258,7 @@ bool QtAxExcelEngine::loadSheet(const QString &sheet_name,
     {
         return false;
     }
-    loadSheet_internal(pre_load);
+    loadSheet_internal(pre_read);
     return true;
 }
 
@@ -274,7 +274,7 @@ bool QtAxExcelEngine::hasSheet(const QString &sheet_name)
     return true;
 }
 
-void QtAxExcelEngine::loadSheet_internal(bool pre_load)
+void QtAxExcelEngine::loadSheet_internal(bool pre_read)
 {
     //获取该sheet的使用范围对象
     QAxObject *used_range = active_sheet_->querySubObject("UsedRange");
@@ -298,7 +298,7 @@ void QtAxExcelEngine::loadSheet_internal(bool pre_load)
 		preload_sheet_data_.clear();
 		preload_sheet_data_.reserve(row_count_ * column_count_);
 		//预加载的数据，存放
-		if (pre_load)
+		if (pre_read)
 		{
 			//Value2 and Value 的区别是
 			QVariantList row_list = used_range->property("Value").toList();
@@ -348,47 +348,6 @@ void QtAxExcelEngine::renameSheet(const QString & new_name)
 //把tableWidget中的数据保存到excel中
 bool QtAxExcelEngine::writeTableWidget(QTableWidget *table_widget)
 {
-    if ( NULL == table_widget )
-    {
-        return false;
-    }
-    if ( !is_open_ )
-    {
-        return false;
-    }
-
-    int table_row = table_widget->rowCount();
-    int table_column = table_widget->columnCount();
-
-    //获取表头写做第一行
-    for (int i = 0; i < table_column; i++)
-    {
-        if ( table_widget->horizontalHeaderItem(i) != NULL )
-        {
-            this->setCell(1, i + 1, table_widget->horizontalHeaderItem(i)->text());
-        }
-    }
-
-    //写数据
-    for (int i = 0; i < table_row; i++)
-    {
-        for (int j = 0; j < table_column; j++)
-        {
-            if ( table_widget->item(i, j) != NULL )
-            {
-                this->setCell(i + 2, j + 1, table_widget->item(i, j)->text());
-            }
-        }
-    }
-
-    //保存
-    save();
-    return true;
-}
-
-
-bool QtAxExcelEngine::writeTableWidget2(QTableWidget *table_widget)
-{
 	if (NULL == table_widget)
 	{
 		return false;
@@ -400,13 +359,14 @@ bool QtAxExcelEngine::writeTableWidget2(QTableWidget *table_widget)
 	int table_row = table_widget->rowCount();
 	int table_column = table_widget->columnCount();
 
+    //写把数据读取到data_table里面
     QVariantList data_table;
     QVariantList header_list;
     data_table.reserve(table_row + 1);
-
+    header_list.reserve(table_column);
+    //先读取标题栏
 	for (int i = 0; i < table_column; i++)
 	{
-        header_list.reserve(table_column);
 		if (table_widget->horizontalHeaderItem(i) != NULL)
 		{
             header_list.push_back(table_widget->horizontalHeaderItem(i)->text()) ;
@@ -415,9 +375,9 @@ bool QtAxExcelEngine::writeTableWidget2(QTableWidget *table_widget)
 		{
             header_list.push_back(QVariant());
 		}
-        data_table.push_back(header_list);
 	}
-
+    data_table.push_back(header_list);
+    //再读取数据区
 	for (int i = 0; i < table_row; i++)
 	{
         QVariantList data_list;
@@ -436,7 +396,19 @@ bool QtAxExcelEngine::writeTableWidget2(QTableWidget *table_widget)
         data_table.push_back(data_list);
 	}
 
-	setRangeCell(1, 1, table_row + 2, table_column + 1, data_table);
+    //调试代码
+    //qDebug("table has row=%d colum=%d", data_table.size(), header_list.size());
+    //for (int i = 0; i < data_table.size(); i++)
+    //{
+    //    QVariantList data_list = data_table.at(i).toList();
+    //    for (int j = 0; j < data_list.size(); j++)
+    //    {
+    //        qDebug("table has row colum[%d,%d] data %s", i,j,data_list.at(j).toString().toStdString().c_str());
+    //    }
+    //}
+
+    //写入EXCEL
+	setRangeCell(1, 1, table_row + 1, table_column , data_table);
 	return true;
 }
 
@@ -619,13 +591,14 @@ QString QtAxExcelEngine::cellsName(int row_no, int column_no)
         .arg(row_no);
 }
 
+//从一个RANGE中读取sheet的数据，QVariantList是一个table，也就是List套List
 void QtAxExcelEngine::getRangecell(int cell1_row,
 				  int cell1_column,
 				  int cell2_row,
 				  int cell2_column,
-				  QVariantList &data_list)
+				  QVariantList &data_table)
 {
-	data_list.clear();
+    data_table.clear();
 	QAxObject *range = active_sheet_->querySubObject("Range(const QString&, const QString&)",
 													 QtAxExcelEngine::cellsName(cell1_row, cell1_column),
 													 QtAxExcelEngine::cellsName(cell2_row, cell2_column));
@@ -634,11 +607,11 @@ void QtAxExcelEngine::getRangecell(int cell1_row,
 	{
 		return;
 	}
-	data_list.reserve((cell2_row - cell1_row + 1) * (cell2_column - cell1_column + 1));
-	data_list = range->property("Value").toList();
+    data_table.reserve((cell2_row - cell1_row + 1));
+    data_table = range->property("Value").toList();
 }
 
-
+//向一个RANGE中写入sheet的数据，QVariantList是一个table，也就是List套List
 bool QtAxExcelEngine::setRangeCell(int cell1_row,
 				  int cell1_column,
 				  int cell2_row,
